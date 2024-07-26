@@ -1,9 +1,11 @@
 import Image from "next/image";
 // src/app/pages/index.tsx
 import React from 'react';
-import LandingPage from '../app/components/LandingPage';
+import About from '../app/components/About';
 import Navbar from '../app/components/Navbar';
 import HeroSection from '../app/components/HeroSection';
+import Testimonials from '../app/components/Testimonials';
+
 
 
 
@@ -12,7 +14,8 @@ const Home: React.FC = () => {
         <div>
             <Navbar />
             <HeroSection />
-            <LandingPage />
+            <About />
+            <Testimonials />
         </div>
     );
 };
