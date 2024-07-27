@@ -47,9 +47,18 @@ export async function GET(request: NextRequest) {
     const query = `
       [out:json][timeout:25];
       (
-        node["leisure"="garden"](around:${radius},${lat},${lon});
-        way["leisure"="garden"](around:${radius},${lat},${lon});
-        relation["leisure"="garden"](around:${radius},${lat},${lon});
+        node["landuse"="allotments"](around:${radius},${lat},${lon});
+        way["landuse"="allotments"](around:${radius},${lat},${lon});
+        relation["landuse"="allotments"](around:${radius},${lat},${lon});
+        node["leisure"="garden"]["garden:type"="community"](around:${radius},${lat},${lon});
+        way["leisure"="garden"]["garden:type"="community"](around:${radius},${lat},${lon});
+        relation["leisure"="garden"]["garden:type"="community"](around:${radius},${lat},${lon});
+        node["landuse"="community_garden"](around:${radius},${lat},${lon});
+        way["landuse"="community_garden"](around:${radius},${lat},${lon});
+        relation["landuse"="community_garden"](around:${radius},${lat},${lon});
+        node["leisure"="garden"]["garden:type"="urban_farming"](around:${radius},${lat},${lon});
+        way["leisure"="garden"]["garden:type"="urban_farming"](around:${radius},${lat},${lon});
+        relation["leisure"="garden"]["garden:type"="urban_farming"](around:${radius},${lat},${lon});
       );
       out center ${limit};
     `;
@@ -62,15 +71,15 @@ export async function GET(request: NextRequest) {
     console.log('Received response from Overpass API');
 
     if (response.data.elements.length === 0) {
-      return NextResponse.json({ error: 'Aucun jardin trouvé' }, { status: 404 });
+      return NextResponse.json({ error: 'Aucun jardin urbain trouvé' }, { status: 404 });
     }
 
     const gardens: Garden[] = response.data.elements.map((element: any, index: number) => ({
       id: element.id,
-      name: element.tags.name || `Jardin ${index + 1}`,
+      name: element.tags.name || `Jardin urbain ${index + 1}`,
       lat: element.lat || element.center.lat,
       lng: element.lon || element.center.lon,
-      description: element.tags.description || 'Pas de description disponible'
+      description: element.tags.description || 'Jardin urbain ou espace d\'agriculture urbaine'
     }));
 
     console.log('Gardens data:', gardens);
@@ -78,6 +87,6 @@ export async function GET(request: NextRequest) {
     
   } catch (error) {
     console.error('Erreur détaillée:', error);
-    return NextResponse.json({ error: 'Erreur lors de la récupération des jardins', details: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur lors de la récupération des jardins urbains', details: error.message }, { status: 500 });
   }
 }
