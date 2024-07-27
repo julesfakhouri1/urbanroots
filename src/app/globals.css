@@ -2,32 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+@import 'leaflet/dist/leaflet.css';
+
+/* styles/globals.css */
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    --font-roboto: 'Roboto', sans-serif;
+    --font-caveat: 'Caveat', cursive;
   }
-}
-
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  
+  body {
+    font-family: var(--font-roboto); /* Police par défaut pour le contenu principal */
+    line-height: 1.6; /* Améliore la lisibilité */
   }
-}
+  
+  h1, h2, h3, h4, .accent {
+    font-family: var(--font-caveat); /* Police pour les éléments accentués */
+  }
+  
+  /* Exemple d'utilisation pour les titres */
+  h1 {
+    font-size: 2.5rem;
+  }
+  
+  h2 {
+    font-size: 2rem;
+  }
+  
+  .accent {
+    font-family: var(--font-dancing-script);
+    font-size: 1.5rem; 
+    color: #34967d; 
+  }
+
+input::placeholder {
+    color: #ffffff; 
+    opacity: 0.9; /* Ajustez l'opacité si nécessaire */
+  }
+  
