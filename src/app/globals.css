@@ -27,12 +27,6 @@
   h2 {
     font-size: 2rem;
   }
-  
-  .accent {
-    font-family: var(--font-dancing-script);
-    font-size: 1.5rem; 
-    color: #34967d; 
-  }
 
 input::placeholder {
     color: #ffffff; 
