@@ -5,7 +5,8 @@ import About from '../app/components/About';
 import Navbar from '../app/components/Navbar';
 import HeroSection from '../app/components/HeroSection';
 import Testimonials from '../app/components/Testimonials';
-
+import ImpactSection from "./components/ImpactSection";
+import Footer from "./components/Footer";
 
 
 
@@ -16,6 +17,8 @@ const Home: React.FC = () => {
             <HeroSection />
             <About />
             <Testimonials />
+            <ImpactSection />
+            <Footer />
         </div>
     );
 };
