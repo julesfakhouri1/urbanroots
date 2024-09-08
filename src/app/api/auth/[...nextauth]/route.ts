@@ -5,7 +5,6 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaClient } from "@prisma/client";
 import { compare } from "bcrypt";
 
-
 let prisma: PrismaClient;
 
 declare global {
@@ -42,32 +41,40 @@ const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+       
         if (!credentials?.email || !credentials?.password) {
+        
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email,
-          },
-        });
+        try {
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials.email,
+            },
+          });
 
-        if (!user) {
-          return null;
+          if (!user) {
+           
+            return null;
+          }
+
+          const isPasswordValid = await compare(credentials.password, user.password);
+          if (!isPasswordValid) {
+          
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          };
+
+        } catch (error) {
+          console.error("Erreur lors de l'authentification :", error);
+          return null;  
         }
-
-        // Validation du mot de passe avec bcrypt
-        const isPasswordValid = await compare(credentials.password, user.password);
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        };
       },
     }),
   ],
