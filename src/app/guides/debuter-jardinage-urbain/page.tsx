@@ -2,9 +2,9 @@ import React from "react";
 import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
-import Navbar from '../../components/Navbar'; // Assurez-vous que le chemin est correct
-import Footer from '../../components/Footer'; // Assurez-vous que le chemin est correct
-import FraiseImage from '../../images/fraise.webp'; // Assurez-vous que le chemin est correct
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer'; 
+import FraiseImage from '../../images/Fraise.webp'; 
 
 const DebuterJardinageUrbain: React.FC = () => {
   return (
