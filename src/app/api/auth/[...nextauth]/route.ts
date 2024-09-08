@@ -5,7 +5,21 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaClient } from "@prisma/client";
 import { compare } from "bcrypt";
 
-const prisma = new PrismaClient();
+
+let prisma: PrismaClient;
+
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
+if (process.env.NODE_ENV === "production") {
+  prisma = new PrismaClient();
+} else {
+  if (!global.prisma) {
+    global.prisma = new PrismaClient();
+  }
+  prisma = global.prisma;
+}
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -32,6 +46,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Recherche de l'utilisateur dans la base de données avec Prisma
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email,
@@ -42,7 +57,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Bcrypt
+        // Validation du mot de passe avec bcrypt
         const isPasswordValid = await compare(credentials.password, user.password);
 
         if (!isPasswordValid) {
