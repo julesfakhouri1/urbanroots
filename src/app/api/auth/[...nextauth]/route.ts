@@ -29,7 +29,7 @@ declare module "next-auth" {
   }
 }
 
-export const authOptions: NextAuthOptions = {
+const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -46,7 +46,6 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // Recherche de l'utilisateur dans la base de données avec Prisma
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email,
