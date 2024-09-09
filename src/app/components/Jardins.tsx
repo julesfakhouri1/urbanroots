@@ -43,7 +43,7 @@ const GardensPage: React.FC = () => {
   const fetchGardens = useCallback(async (city: string) => {
     setIsLoading(true);
     setError("");
-    try {
+    try { 
       const response = await axios.get(`https://www.urban-root.site/api/gardens?city=${encodeURIComponent(city)}`);
       console.log("API response:", response.data);
 

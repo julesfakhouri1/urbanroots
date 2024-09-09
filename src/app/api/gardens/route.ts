@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
+import { setTimeout } from 'timers/promises';
+import NodeCache from "node-cache";
 
 interface Garden {
   id: number;
@@ -11,9 +13,19 @@ interface Garden {
 
 const NOMINATIM_API = "https://nominatim.openstreetmap.org/search";
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
+const geocodeCache = new NodeCache({ stdTTL: 86400 }); // Cache for 24 hours
 
 async function geocodeCity(city: string): Promise<{ lat: number; lon: number }> {
   console.log(`Geocoding city: ${city}`);
+  
+  const cachedResult = geocodeCache.get<{ lat: number; lon: number }>(city);
+  if (cachedResult) {
+    console.log(`Using cached coordinates for ${city}`);
+    return cachedResult;
+  }
+
+  await setTimeout(1000); // Wait 1 second before each request to respect rate limits
+
   try {
     const response = await axios.get(NOMINATIM_API, {
       params: {
@@ -21,6 +33,10 @@ async function geocodeCity(city: string): Promise<{ lat: number; lon: number }> 
         format: "json",
         limit: 1,
       },
+      headers: {
+        'User-Agent': 'UrbanRootApp/1.0 (https://www.urban-root.site/)'
+      },
+      timeout: 5000, // 5 seconds timeout
     });
 
     if (response.data.length === 0) {
@@ -29,7 +45,10 @@ async function geocodeCity(city: string): Promise<{ lat: number; lon: number }> 
 
     const { lat, lon } = response.data[0];
     console.log(`Geocoded coordinates: lat=${lat}, lon=${lon}`);
-    return { lat: parseFloat(lat), lon: parseFloat(lon) };
+    
+    const result = { lat: parseFloat(lat), lon: parseFloat(lon) };
+    geocodeCache.set(city, result);
+    return result;
   } catch (error) {
     console.error("Error during geocoding:", error);
     throw new Error(`Geocoding failed: ${error instanceof Error ? error.message : "Unknown error"}`);
