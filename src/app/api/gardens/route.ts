@@ -9,49 +9,57 @@ interface Garden {
   description: string;
 }
 
-async function geocodeCity(city: string) {
-  const response = await axios.get(
-    "https://nominatim.openstreetmap.org/search",
-    {
+const NOMINATIM_API = "https://nominatim.openstreetmap.org/search";
+const OVERPASS_API = "https://overpass-api.de/api/interpreter";
+
+async function geocodeCity(city: string): Promise<{ lat: number; lon: number }> {
+  console.log(`Geocoding city: ${city}`);
+  try {
+    const response = await axios.get(NOMINATIM_API, {
       params: {
         q: city,
         format: "json",
         limit: 1,
       },
+    });
+
+    if (response.data.length === 0) {
+      throw new Error("City not found");
     }
-  );
 
-  if (response.data.length === 0) {
-    throw new Error("City not found");
+    const { lat, lon } = response.data[0];
+    console.log(`Geocoded coordinates: lat=${lat}, lon=${lon}`);
+    return { lat: parseFloat(lat), lon: parseFloat(lon) };
+  } catch (error) {
+    console.error("Error during geocoding:", error);
+    throw new Error(`Geocoding failed: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
-
-  const { lat, lon } = response.data[0];
-  return { lat: parseFloat(lat), lon: parseFloat(lon) };
 }
 
 export async function GET(request: NextRequest) {
+  console.log("API route hit");
+  
   const headers = new Headers({
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   });
+
   if (request.method === 'OPTIONS') {
-    return NextResponse.json({}, { headers });
+    return new NextResponse(null, { headers });
   }
-  console.log("API route hit");
+
   const { searchParams } = new URL(request.url);
   const city = searchParams.get("city");
   console.log("City:", city);
 
   if (!city) {
-    return NextResponse.json({ error: "Ville requise" }, { status: 400 });
+    return NextResponse.json({ error: "Ville requise" }, { status: 400, headers });
   }
 
   try {
-    console.log("Attempting to geocode city");
     const { lat, lon } = await geocodeCity(city);
-    console.log("Geocoded coordinates:", { lat, lon });
-
+    
     const radius = searchParams.get("radius") || "5000";
     const limit = searchParams.get("limit") || "50";
 
@@ -75,19 +83,17 @@ export async function GET(request: NextRequest) {
     `;
 
     console.log("Sending request to Overpass API");
-    const response = await axios.get(
-      "https://overpass-api.de/api/interpreter",
-      {
-        params: { data: query },
-      }
-    );
+    const response = await axios.get(OVERPASS_API, {
+      params: { data: query },
+      timeout: 30000, // 30 seconds timeout
+    });
 
-    console.log("Received response from Overpass API");
+    console.log(`Received response from Overpass API: ${response.data.elements.length} elements`);
 
     if (response.data.elements.length === 0) {
       return NextResponse.json(
         { error: "Aucun jardin urbain trouvé" },
-        { status: 404 }
+        { status: 404, headers }
       );
     }
 
@@ -103,29 +109,33 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    console.log("Gardens data:", gardens);
-return NextResponse.json(gardens, { headers });
+    console.log(`Processed ${gardens.length} gardens`);
+    return NextResponse.json(gardens, { headers });
   } catch (error: unknown) {
-    console.error("Erreur détaillée:", error);
+    console.error("Detailed error:", error);
 
-    // Check if 'error' is an instance of Error to access 'message' safely
+    let errorMessage = "Erreur inconnue lors de la récupération des jardins urbains";
+    let statusCode = 500;
+
     if (error instanceof Error) {
-      return NextResponse.json(
-        {
-          error: "Erreur lors de la récupération des jardins urbains",
-          details: error.message,
-        },
-        { status: 500 }
-      );
-    } else {
-      // Handle cases where the error is not an Error object
-      return NextResponse.json(
-        {
-          error: "Erreur lors de la récupération des jardins urbains",
-          details: "An unexpected error occurred",
-        },
-        { status: 500 }
-      );
+      errorMessage = error.message;
     }
+
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        statusCode = error.response.status;
+        errorMessage = `Erreur API: ${error.response.data.error || error.message}`;
+      } else if (error.request) {
+        errorMessage = "Pas de réponse reçue du serveur";
+      }
+    }
+
+    return NextResponse.json(
+      {
+        error: "Erreur lors de la récupération des jardins urbains",
+        details: errorMessage,
+      },
+      { status: statusCode, headers }
+    );
   }
 }
