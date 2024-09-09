@@ -30,6 +30,14 @@ async function geocodeCity(city: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const headers = new Headers({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  });
+  if (request.method === 'OPTIONS') {
+    return NextResponse.json({}, { headers });
+  }
   console.log("API route hit");
   const { searchParams } = new URL(request.url);
   const city = searchParams.get("city");
@@ -96,7 +104,7 @@ export async function GET(request: NextRequest) {
     );
 
     console.log("Gardens data:", gardens);
-    return NextResponse.json(gardens);
+return NextResponse.json(gardens, { headers });
   } catch (error: unknown) {
     console.error("Erreur détaillée:", error);
 
