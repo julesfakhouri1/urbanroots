@@ -1,30 +1,18 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-
-// from "react-leaflet";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import L from "leaflet";
 import axios from "axios";
 import "leaflet/dist/leaflet.css";
 import dynamic from 'next/dynamic';
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), {
-  ssr: false,
-});
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), {
-  ssr: false,
-});
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), {
-  ssr: false,
-});
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), {
-  ssr: false,
-});
-const Header = dynamic(() => import('../components/Navbar'), { ssr: false });
+import { debounce } from 'lodash';
 
-// const Header = dynamic(() => import("../components/Navbar"));
-// import Header from "../components/Navbar";
-// import Footer from "../components/Footer";
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+const Header = dynamic(() => import('../components/Navbar'), { ssr: false });
 const Footer = dynamic(() => import('../components/Footer'), { ssr: false });
-// Correction pour l'icône par défaut de Leaflet
+
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
@@ -46,17 +34,17 @@ interface Garden {
 
 const GardensPage: React.FC = () => {
   const [gardens, setGardens] = useState<Garden[]>([]);
-  const [mapCenter, setMapCenter] = useState<[number, number]>([
-    43.7323492, 7.4276832,
-  ]); // Coordonnées par défaut de Monaco
+  const [mapCenter, setMapCenter] = useState<[number, number]>([48.8566, 2.3522]);
   const [searchCity, setSearchCity] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
 
-  const fetchGardens = async (city: string) => {
+  const fetchGardens = useCallback(async (city: string) => {
+    setIsLoading(true);
+    setError("");
     try {
-      setError("");
-      const response = await axios.get(`/api/gardens?city=${encodeURIComponent(city)}`);
+      const response = await axios.get(`https://www.urban-root.site/api/gardens?city=${encodeURIComponent(city)}`);
       console.log("API response:", response.data);
 
       if (Array.isArray(response.data) && response.data.length > 0) {
@@ -68,33 +56,21 @@ const GardensPage: React.FC = () => {
         setError("Aucun jardin trouvé pour cette ville");
       }
     } catch (error: unknown) {
-      // Log the error with more detailed check
-      if (error instanceof Error) {
-        console.error("Erreur détaillée:", error.message);
-        setError(
-          `Erreur lors de la récupération des jardins: ${error.message}`
-        );
+      console.error("Erreur détaillée:", error);
+      if (axios.isAxiosError(error)) {
+        setError(`Erreur lors de la récupération des jardins: ${error.response?.data?.error || error.message}`);
       } else {
-        console.error("Erreur détaillée:", error);
-        setError(
-          "Erreur lors de la récupération des jardins: An unknown error occurred"
-        );
+        setError("Erreur inconnue lors de la récupération des jardins");
       }
-
-      // Handle cases where error might be from an HTTP response
-      if (typeof error === "object" && error !== null && "response" in error) {
-        const err = error as { response: { data: any } };
-        if (err.response && err.response.data) {
-          console.error("Erreur détaillée:", err.response.data);
-          setError(
-            `Erreur lors de la récupération des jardins: ${
-              err.response.data.error || "Unknown error"
-            }`
-          );
-        }
-      }
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, []);
+
+  const debouncedFetchGardens = useCallback(
+    debounce((city: string) => fetchGardens(city), 300),
+    [fetchGardens]
+  );
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,6 +78,13 @@ const GardensPage: React.FC = () => {
       fetchGardens(searchCity);
     } else {
       setError("Nom de la ville requis");
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchCity(e.target.value);
+    if (e.target.value.trim() !== "") {
+      debouncedFetchGardens(e.target.value);
     }
   };
 
@@ -128,14 +111,15 @@ const GardensPage: React.FC = () => {
                 type="text"
                 placeholder="Nom de la ville"
                 value={searchCity}
-                onChange={(e) => setSearchCity(e.target.value)}
-                className="border rounded px-4 py-2"
+                onChange={handleInputChange}
+                className="border rounded px-4 py-2 flex-grow"
               />
               <button
                 type="submit"
-                className="bg-blue-500 text-white rounded px-4 py-2"
+                className="bg-blue-500 text-white rounded px-4 py-2 hover:bg-blue-600 transition-colors"
+                disabled={isLoading}
               >
-                Rechercher
+                {isLoading ? 'Recherche...' : 'Rechercher'}
               </button>
             </div>
           </form>
@@ -144,8 +128,8 @@ const GardensPage: React.FC = () => {
             ref={mapRef}
             center={mapCenter}
             zoom={13}
-            style={{ height: "600px", width: "100%", zIndex: -1 }}
-            key={mapCenter.join(",")} // Force re-render on center change
+            style={{ height: "600px", width: "100%", zIndex: 1 }}
+            key={mapCenter.join(",")}
           >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -166,23 +150,26 @@ const GardensPage: React.FC = () => {
             <h2 className="text-2xl font-bold text-primary-600 mb-4">
               Liste des Jardins
             </h2>
-            <ul className="space-y-4">
-              {gardens.map((garden) => (
-                <li
-                  key={garden.id}
-                  className="border rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow duration-300"
-                >
-                  <h3 className="text-xl font-semibold">{garden.name}</h3>
-                  {garden.description !== "Pas de description disponible" && (
-                    <p className="text-gray-700 mt-2">{garden.description}</p>
-                  )}
-                  <p className="text-gray-500 mt-2">
-                    Latitude: {garden.lat.toFixed(6)}, Longitude:{" "}
-                    {garden.lng.toFixed(6)}
-                  </p>
-                </li>
-              ))}
-            </ul>
+            {gardens.length > 0 ? (
+              <ul className="space-y-4">
+                {gardens.map((garden) => (
+                  <li
+                    key={garden.id}
+                    className="border rounded-lg p-4 shadow-md hover:shadow-lg transition-shadow duration-300"
+                  >
+                    <h3 className="text-xl font-semibold">{garden.name}</h3>
+                    {garden.description !== "Pas de description disponible" && (
+                      <p className="text-gray-700 mt-2">{garden.description}</p>
+                    )}
+                    <p className="text-gray-500 mt-2">
+                      Latitude: {garden.lat.toFixed(6)}, Longitude: {garden.lng.toFixed(6)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500">Aucun jardin trouvé. Essayez de rechercher une ville.</p>
+            )}
           </div>
         </div>
       </main>
@@ -192,4 +179,3 @@ const GardensPage: React.FC = () => {
 };
 
 export default GardensPage;
-
