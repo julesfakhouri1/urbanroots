@@ -56,9 +56,7 @@ const GardensPage: React.FC = () => {
   const fetchGardens = async (city: string) => {
     try {
       setError("");
-      const response = await axios.get(
-        `http://localhost:3000/api/gardens?city=${encodeURIComponent(city)}`
-      );
+      const response = await axios.get(`/api/gardens?city=${encodeURIComponent(city)}`);
       console.log("API response:", response.data);
 
       if (Array.isArray(response.data) && response.data.length > 0) {
